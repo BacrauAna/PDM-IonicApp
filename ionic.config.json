@@ -1,0 +1,7 @@
+{
+  "name": "mySecApp",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "react"
+}
