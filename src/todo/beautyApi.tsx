@@ -13,14 +13,14 @@ export const getBeauties: (token: string) => Promise<BeautyProps[]> = token => {
         result.data.forEach(async (beauty: BeautyProps) => {
             await Storage.set({
                 key: beauty._id!,
-                value: JSON.stringify({
-                    id: beauty._id,
-                    data: beauty.data,
-                    ora: beauty.ora,
-                    servicii: beauty.servicii,
-                    nrPersoane: beauty.nrPersoane,
-                    nume: beauty.nume,
-                    ocupat: beauty.ocupat,
+                value: JSON.stringify({beauty
+                    // id: beauty._id,
+                    // data: beauty.data,
+                    // ora: beauty.ora,
+                    // servicii: beauty.servicii,
+                    // nrPersoane: beauty.nrPersoane,
+                    // nume: beauty.nume,
+                    // ocupat: beauty.ocupat,
                 }),
             });
         });
@@ -28,7 +28,10 @@ export const getBeauties: (token: string) => Promise<BeautyProps[]> = token => {
     return withLogs(result, "getBeauties");
 };
 
-
+export const getBeauty: (token: string, id: string) => Promise<BeautyProps> = (token,id) => {
+    var result = axios.get(`${beautyUrl}/${id}`, authConfig(token))
+    return withLogs(result, "getBeauty");
+}
 
 export const createBeauties:
     (token: string,
@@ -39,15 +42,15 @@ export const createBeauties:
         var beauty = r.data;
         await Storage.set({
             key: beauty._id!,
-            value: JSON.stringify({
-                id: beauty._id,
-                data: beauty.data,
-                ora: beauty.ora,
-                servicii: beauty.servicii,
-                nrPersoane: beauty.nrPeroane,
-                nume: beauty.nume,
-                ocupat: beauty.ocupat,
-            }),
+            value: JSON.stringify(beauty
+                // id: beauty._id,
+                // data: beauty.data,
+                // ora: beauty.ora,
+                // servicii: beauty.servicii,
+                // nrPersoane: beauty.nrPeroane,
+                // nume: beauty.nume,
+                // ocupat: beauty.ocupat,
+            ),
         });
     });
     return withLogs(result, "createBeauties");
@@ -56,21 +59,21 @@ export const createBeauties:
 export const updateBeauties:
     (token: string,
      beauty: BeautyProps)
-        => Promise<BeautyProps[]> = (token, beauty) => {
+        => Promise<BeautyProps> = (token, beauty) => {
     var result = axios.put(`${beautyUrl}/${beauty._id}`, beauty, authConfig(token));
     result.then(async function (r) {
         var beauty = r.data;
         await Storage.set({
             key: beauty._id!,
-            value: JSON.stringify({
-                id: beauty._id,
-                data: beauty.data,
-                ora: beauty.ora,
-                servicii: beauty.servicii,
-                nrPersoane: beauty.nrPeroane,
-                nume: beauty.nume,
-                ocupat: beauty.ocupat,
-            }),
+            value: JSON.stringify(beauty
+                // id: beauty._id,
+                // data: beauty.data,
+                // ora: beauty.ora,
+                // servicii: beauty.servicii,
+                // nrPersoane: beauty.nrPeroane,
+                // nume: beauty.nume,
+                // ocupat: beauty.ocupat,
+            ),
         });
     });
     return withLogs(result, "updateCarte");
@@ -117,47 +120,3 @@ export const newWebSocket = (
     };
 };
 
-
-// import axios from 'axios';
-// import { getLogger } from '../core';
-// import { BeautyProps } from './BeautyProps';
-//
-// const log = getLogger('itemApi');
-//
-// const baseUrl = 'http://localhost:3000';
-// const itemUrl = `${baseUrl}/item`;
-//
-// interface ResponseProps<T> {
-//     data: T;
-// }
-//
-// function withLogs<T>(promise: Promise<ResponseProps<T>>, fnName: string): Promise<T> {
-//     log(`${fnName} - started`);
-//     return promise
-//         .then(res => {
-//             log(`${fnName} - succeeded`);
-//             return Promise.resolve(res.data);
-//         })
-//         .catch(err => {
-//             log(`${fnName} - failed`);
-//             return Promise.reject(err);
-//         });
-// }
-//
-// const config = {
-//     headers: {
-//         'Content-Type': 'application/json'
-//     }
-// };
-//
-// export const getItems: () => Promise<BeautyProps[]> = () => {
-//     return withLogs(axios.get(itemUrl, config), 'getItems');
-// }
-//
-// export const createItem: (item: BeautyProps) => Promise<BeautyProps[]> = item => {
-//     return withLogs(axios.post(itemUrl, item, config), 'createItem');
-// }
-//
-// export const updateItem: (item: BeautyProps) => Promise<BeautyProps[]> = item => {
-//     return withLogs(axios.put(`${itemUrl}/${item.id}`, item, config), 'updateItem');
-// }

@@ -11,12 +11,18 @@ import {
     IonCheckbox,
     IonPage,
     IonTitle,
-    IonToolbar
+    IonToolbar,
+    IonFab,
+    IonFabButton, IonIcon, IonImg, createAnimation
 } from '@ionic/react';
 import { getLogger } from '../core';
 import { BeautyContext } from './BeautyProvider';
 import { RouteComponentProps } from 'react-router';
 import { BeautyProps } from './BeautyProps';
+import { useNetwork } from "../utils/useNetwork";
+import {usePhotoGallery} from "../utils/usePhotoGallery";
+import {camera} from "ionicons/icons";
+import {MyMap} from "../utils/MyMap";
 
 const log = getLogger('BeautyEdit');
 
@@ -25,14 +31,21 @@ interface BeautyEditProps extends RouteComponentProps<{
 }> {}
 
 const BeautyEdit: React.FC<BeautyEditProps> = ({ history, match }) => {
-    const { beauties, saving, savingError, saveBeauty, deleteBeauty } = useContext(BeautyContext);
+    const { beauties, saving, savingError, saveBeauty, deleteBeauty, getServerBeauty, oldBeauty } = useContext(BeautyContext);
     const [data, setData] = useState('');
     const [ora, setOra] = useState('');
     const [servicii, setServicii] = useState('');
     const [nrPersoane, setNrPersoane] = useState(0);
     const [nume, setNume] = useState('');
     const [ocupat, setOcupat] = useState(false);
+    const [photoPath, setPhotoPath] = useState('');
+    const [latitude, setLatitude] = useState(46.752883);
+    const [longitude, setLongitude] = useState(23.598593);
     const [beauty, setBeauty] = useState<BeautyProps>();
+    const [beauty2, setBeauty2] = useState<BeautyProps>();
+    const { networkStatus } = useNetwork();
+    const { takePhoto } = usePhotoGallery();
+
     useEffect(() => {
         log('useEffect');
         const routeId = match.params.id || "";
@@ -45,21 +58,63 @@ const BeautyEdit: React.FC<BeautyEditProps> = ({ history, match }) => {
             setNrPersoane(beauty.nrPersoane);
             setNume(beauty.nume);
             setOcupat(beauty.ocupat)
+            setPhotoPath(beauty.photoPath)
+            if (beauty.latitude) setLatitude(beauty.latitude);
+            if (beauty.longitude) setLongitude(beauty.longitude);
         }
-    }, [match.params.id, beauties]);
+    }, [match.params.id, beauties, getServerBeauty]);
+
+    useEffect(() => {
+        setBeauty2(oldBeauty);
+        log("OLD BEAUTY: " + JSON.stringify(oldBeauty));
+    }, [oldBeauty]);
+
     const handleSave = () => {
         const editedBeauty = beauty
-            ? { ...beauty, data,ora,servicii,nrPersoane,nume,ocupat }
-            : { data,ora,servicii,nrPersoane,nume,ocupat };
-        saveBeauty && saveBeauty(editedBeauty).then(() => history.goBack());
+            ? { ...beauty, data,ora,servicii,nrPersoane,nume,ocupat, photoPath, latitude, longitude, status: 0 }
+            : { data,ora,servicii,nrPersoane,nume,ocupat, photoPath, latitude, longitude, status: 0 };
+        saveBeauty && saveBeauty(editedBeauty, networkStatus.connected).then(() => {
+            log(JSON.stringify(beauty2));
+            if (beauty2 === undefined) history.goBack()
+        });
     };
+
     const handleDelete = () => {
         const editedBeauty = beauty
-            ? { ...beauty, data,ora,servicii,nrPersoane,nume,ocupat }
-            : { data,ora,servicii,nrPersoane,nume,ocupat };
-        deleteBeauty && deleteBeauty(editedBeauty).then(() => history.goBack());
+            ? { ...beauty, data,ora,servicii,nrPersoane,nume,ocupat,photoPath, latitude, longitude, status: 0 }
+            : { data,ora,servicii,nrPersoane,nume,ocupat,photoPath, latitude, longitude, status: 0};
+        deleteBeauty && deleteBeauty(editedBeauty, networkStatus.connected).then(() => history.goBack());
     };
-    log('render');
+
+    function chainAnimations() {
+        const label1 = document.querySelector('.label1');
+        const label2 = document.querySelector('.label2');
+        const label3 = document.querySelector('.label3');
+        const label4 = document.querySelector('.label4');
+        const label5 = document.querySelector('.label5');
+        const elem2 = document.querySelector('.checkBox');
+        if (label1 && label2 && label3 && label4 && label5 && elem2) {
+            const animation1 = createAnimation()
+                .addElement(Array.of(label1, label2, label3, label4, label5))
+                .duration(200)
+                .direction("alternate")
+                .iterations(3)
+                .fromTo('transform', 'rotate(0)', 'rotate(20deg)')
+                .fromTo('transform', 'rotate(20deg)', 'rotate(0)');
+
+            const animation2= createAnimation()
+                .addElement(elem2)
+                .duration(500)
+                .fromTo('transform', 'scale(1)', 'scale(0.9)');
+            (async () => {
+                await animation1.play();
+                await animation2.play();
+            })();
+        }
+    }
+    useEffect(chainAnimations, []);
+
+    //log('render');
     return (
         <IonPage>
             <IonHeader>
@@ -77,7 +132,7 @@ const BeautyEdit: React.FC<BeautyEditProps> = ({ history, match }) => {
             </IonHeader>
             <IonContent>
                 <IonItem>
-                    <IonLabel>Data(LL/ZZ/AAAA): </IonLabel>
+                    <div className="label1"><IonLabel>Data(LL/ZZ/AAAA): </IonLabel></div>
                     <IonInput
                         className="inputField"
                         value={data}
@@ -85,7 +140,7 @@ const BeautyEdit: React.FC<BeautyEditProps> = ({ history, match }) => {
                     />
                 </IonItem>
                 <IonItem>
-                    <IonLabel>Ora(HH:mm): </IonLabel>
+                    <div className="label2"><IonLabel>Ora(HH:mm): </IonLabel></div>
                     <IonInput
                         className="inputField"
                         value={ora}
@@ -93,7 +148,7 @@ const BeautyEdit: React.FC<BeautyEditProps> = ({ history, match }) => {
                     />
                 </IonItem>
                 <IonItem>
-                    <IonLabel>Servicii: </IonLabel>
+                    <div className="label3"><IonLabel>Servicii: </IonLabel></div>
                     <IonInput
                         className="inputField"
                         value={servicii}
@@ -101,7 +156,7 @@ const BeautyEdit: React.FC<BeautyEditProps> = ({ history, match }) => {
                     />
                 </IonItem>
                 <IonItem>
-                    <IonLabel>Nr. persoane: </IonLabel>
+                    <div className="label4"><IonLabel>Nr. persoane: </IonLabel></div>
                     <IonInput
                         className="inputField"
                         value={nrPersoane}
@@ -109,13 +164,14 @@ const BeautyEdit: React.FC<BeautyEditProps> = ({ history, match }) => {
                     />
                 </IonItem>
                 <IonItem>
-                    <IonLabel>Nume: </IonLabel>
+                    <div className="label5"><IonLabel>Nume: </IonLabel></div>
                     <IonInput
                         className="inputField"
                         value={nume}
                         onIonChange={(e) => setNume(e.detail.value || "")}
                     />
                 </IonItem>
+                <div className="checkBox">
                 <IonItem>
                     <IonLabel>Ocupat: </IonLabel>
                     <IonCheckbox
@@ -123,98 +179,91 @@ const BeautyEdit: React.FC<BeautyEditProps> = ({ history, match }) => {
                         onIonChange={(e) => setOcupat(e.detail.checked)}
                     />
                 </IonItem>
+                </div>
+
+                {beauty2 && (
+                    <>
+                    <IonItem>
+                        <IonLabel>Data(LL/ZZ/AAAA): </IonLabel>
+                        <IonInput
+                            className="inputField"
+                            value={beauty2.data}
+                            onIonChange={(e) => setData(e.detail.value || "")}
+                        />
+                    </IonItem>
+                    <IonItem>
+                        <IonLabel>Ora(HH:mm): </IonLabel>
+                        <IonInput
+                            className="inputField"
+                            value={beauty2.ora}
+                            onIonChange={(e) => setOra(e.detail.value || "")}
+                        />
+                    </IonItem>
+                    <IonItem>
+                        <IonLabel>Servicii: </IonLabel>
+                        <IonInput
+                            className="inputField"
+                            value={beauty2.servicii}
+                            onIonChange={(e) => setServicii(e.detail.value || "")}
+                        />
+                    </IonItem>
+                    <IonItem>
+                        <IonLabel>Nr. persoane: </IonLabel>
+                        <IonInput
+                            className="inputField"
+                            value={beauty2.nrPersoane}
+                            onIonChange={(e) => setNrPersoane(Number(e.detail.value))}
+                        />
+                    </IonItem>
+                    <IonItem>
+                        <IonLabel>Nume: </IonLabel>
+                        <IonInput
+                            className="inputField"
+                            value={beauty2.nume}
+                            onIonChange={(e) => setNume(e.detail.value || "")}
+                        />
+                    </IonItem>
+                    <IonItem>
+                        <IonLabel>Ocupat: </IonLabel>
+                        <IonCheckbox
+                            checked={beauty2.ocupat}
+                            onIonChange={(e) => setOcupat(e.detail.checked)}
+                        />
+                    </IonItem>
+                    </>
+                )}
                 <IonLoading isOpen={saving} />
                 {savingError && (
                     <div>{savingError.message || 'Failed to save beauty'}</div>
                 )}
+                <IonImg
+                    style={{width: "600px", height: "600px", margin: "0 auto"}}
+                    alt={"No photo"}
+                    src={photoPath}
+                />
+                <MyMap
+                    lat={latitude}
+                    lng={longitude}
+                    onMapClick={(location: any) => {
+                        setLatitude(location.latLng.lat());
+                        setLongitude(location.latLng.lng());
+                    }}
+                />
+                <IonFab vertical="bottom" horizontal="end" slot="fixed">
+                    <IonFabButton
+                        onClick={() => {
+                            const photoTaken = takePhoto();
+                            photoTaken.then((data) => {
+                                setPhotoPath(data.webviewPath!);
+                            });
+                        }}
+                    >
+                        <IonIcon icon={camera}/>
+                    </IonFabButton>
+                </IonFab>
             </IonContent>
         </IonPage>
     );
 };
 export default BeautyEdit;
 
-// import React, { useContext, useEffect, useState } from 'react';
-// import {
-//     IonButton,
-//     IonButtons,
-//     IonContent,
-//     IonHeader,
-//     IonInput,
-//     IonItem,
-//     IonCheckbox,
-//     IonLoading,
-//     IonPage,
-//     IonTitle,
-//     IonToolbar,
-//     IonLabel
-// } from '@ionic/react';
-// import { getLogger } from '../core';
-// import { BeautyContext } from './BeautyProvider';
-// import { RouteComponentProps } from 'react-router';
-// import { BeautyProps } from './BeautyProps';
-// //import set = Reflect.set;
-//
-// const log = getLogger('BeautyEdit');
-//
-// interface ItemEditProps extends RouteComponentProps<{
-//     id?: string;
-// }> {}
-//
-// const BeautyEdit: React.FC<ItemEditProps> = ({ history, match }) => {
-//     const { items, saving, savingError, saveItem } = useContext(ItemContext);
-//     //const [text, setText] = useState('');
-//     const [data, setData] = useState('');
-//     const [ora, setOra] = useState('');
-//     const [serv, setServ] = useState('');
-//     const [nrPer, setNrP] = useState('')
-//     const [num, setNum] = useState('');
-//     const [lib, setLib] = useState('');
-//     const [item, setItem] = useState<BeautyProps>();
-//     useEffect(() => {
-//         log('useEffect');
-//         const routeId = match.params.id || '';
-//         const item = items?.find(it => it.id === routeId);
-//         setItem(item);
-//         if (item) {
-//             setData(item.data);
-//             setOra(item.ora);
-//             setServ(item.serv);
-//             setNrP(item.nrPer);
-//             setNum(item.num);
-//             setLib(item.lib);
-//         }
-//     }, [match.params.id, items]);
-//     const handleSave = () => {
-//         const editedItem = item ? { ...item, data, ora, serv, nrPer , num, lib } : { data,ora,serv,nrPer,num,lib };
-//         saveItem && saveItem(editedItem).then(() => history.goBack());
-//     };
-//     log('render');
-//     return (
-//         <IonPage>
-//             <IonHeader>
-//                 <IonToolbar>
-//                     <IonTitle>Edit</IonTitle>
-//                     <IonButtons slot="end">
-//                         <IonButton onClick={handleSave}>
-//                             Save
-//                         </IonButton>
-//                     </IonButtons>
-//                 </IonToolbar>
-//             </IonHeader>
-//             <IonContent>
-//                 <IonLabel>Data(LL/ZZ/AAAA) -> <IonInput value={data} onIonChange={e=>setData(e.detail.value || '')}/></IonLabel><br/>
-//                 <IonLabel>Ora(HH:MM) -> <IonInput value={ora} onIonChange={e=>setOra(e.detail.value || '')}/></IonLabel><br/>
-//                 <IonLabel>Serviciul -> <IonInput value={serv} onIonChange={e=>setServ(e.detail.value || '')}/></IonLabel><br/>
-//                 <IonLabel>Numarul Persoanelor -> <IonInput value={nrPer} onIonChange={e=>setNrP(e.detail.value || '')}/></IonLabel><br/>
-//                 <IonLabel>Numele -> <IonInput value={num} onIonChange={e=>setNum(e.detail.value || '')}/></IonLabel><br/>
-//                 <IonLabel>Liber(True/False) -> <IonInput value={lib} onIonChange={e=>setLib(e.detail.value || '')}/></IonLabel><br/>
-//                 <IonLoading isOpen={saving} />
-//                 {savingError && (
-//                     <div>{savingError.message || 'Failed to save item'}</div>
-//                 )}
-//             </IonContent>
-//         </IonPage>
-//     );
-// };
-//
-// export default BeautyEdit;

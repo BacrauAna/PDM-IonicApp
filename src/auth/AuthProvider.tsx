@@ -103,6 +103,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         });
         const { username, password } = state;
         const { token } = await loginApi(username, password);
+        //console.log("token: "+token);
+        //Storage.set({key:'token',value:token});
         if (canceled) {
           return;
         }

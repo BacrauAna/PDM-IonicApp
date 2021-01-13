@@ -6,4 +6,8 @@ export interface BeautyProps {
     nrPersoane: number;
     nume: string;
     ocupat: boolean;
+    status: number;
+    photoPath: string;
+    latitude:number;
+    longitude:number;
 }

@@ -1,13 +1,13 @@
 import React, {useContext,useState, useEffect} from "react";
 import { RouteComponentProps } from "react-router";
 import { Redirect } from "react-router-dom";
+import { useNetwork } from "../utils/useNetwork";
 import {
     IonContent,
     IonFab,
     IonFabButton,
     IonHeader,
     IonIcon,
-    IonList,
     IonLoading,
     IonPage,
     IonTitle,
@@ -18,6 +18,7 @@ import {
     IonSelect,
     IonSelectOption,
     IonSearchbar,
+    createAnimation,
 } from "@ionic/react";
 import { add } from "ionicons/icons";
 import Beauty from "./Beauty";
@@ -29,10 +30,11 @@ import { BeautyProps } from "./BeautyProps";
 const log = getLogger("BeautyList");
 
 const BeautyList: React.FC<RouteComponentProps> = ({ history }) => {
-    const { beauties, fetching, fetchingError } = useContext(BeautyContext);
+    const { beauties, fetching, fetchingError, updateServer } = useContext(BeautyContext);
     const [disableInfiniteScroll, setDisableInfiniteScroll] = useState<boolean>(
         false
     );
+    const { networkStatus } = useNetwork();
     const [filter, setFilter] = useState<string | undefined>(undefined);
     const [search, setSearch] = useState<string>("");
     const [pos, setPos] = useState(20);
@@ -43,12 +45,9 @@ const BeautyList: React.FC<RouteComponentProps> = ({ history }) => {
         logout?.();
         return <Redirect to={{ pathname: "/login" }} />;
     };
-    useEffect(() => {
-        if (beauties?.length) {
-            setBeautiesShow(beauties.slice(0, 20));
-        }
-    }, [beauties]);
     log("render");
+
+
     async function searchNext($event: CustomEvent<void>) {
         if (beauties && pos < beauties.length) {
             setBeautiesShow([...beautiesShow, ...beauties.slice(pos, 21 + pos)]);
@@ -56,8 +55,22 @@ const BeautyList: React.FC<RouteComponentProps> = ({ history }) => {
         } else {
             setDisableInfiniteScroll(true);
         }
-        ($event.target as HTMLIonInfiniteScrollElement).complete();
+        await ($event.target as HTMLIonInfiniteScrollElement).complete();
     }
+
+    //update server when network status is back online
+    useEffect(() => {
+        if (networkStatus.connected === true) {
+            updateServer && updateServer();
+        }
+    }, [networkStatus.connected]);
+
+    //pagination
+    useEffect(() => {
+        if (beauties?.length) {
+            setBeautiesShow(beauties.slice(0, 20));
+        }
+    }, [beauties]);
 
     useEffect(() => {
         if (filter && beauties) {
@@ -66,26 +79,76 @@ const BeautyList: React.FC<RouteComponentProps> = ({ history }) => {
         }
     }, [filter]);
 
+    //search
     useEffect(() => {
         if (search && beauties) {
             setBeautiesShow(beauties.filter((beauty) => beauty.data.startsWith(search)));
         }
     }, [search]);
+
+    function simpleAnimation() {
+        const el = document.querySelector(".networkStatus");
+        if (el) {
+            const animation = createAnimation()
+                .addElement(el)
+                .duration(1000)
+                .direction("alternate")
+                .iterations(Infinity)
+                .keyframes([
+                    { offset: 0, transform: "scale(1)", opacity: "1" },
+                    {
+                        offset: 1,
+                        transform: "scale(0.95)",
+                        opacity: "1",
+                    },
+                ]);
+            animation.play();
+        }
+    }
+    useEffect(simpleAnimation, []);
+
+    function groupAnimations() {
+        const elem1 = document.querySelector('.searchBar');
+        const elem2 = document.querySelector('.select');
+        if (elem1 && elem2) {
+            const animation1 = createAnimation()
+                .addElement(elem1)
+                .fromTo('transform', 'scale(0.8)','scale(1)');
+            const animation2 = createAnimation()
+                .addElement(elem2)
+                .fromTo('transform', 'scale(1)', 'scale(0.8)');
+            const parentAnimation = createAnimation()
+                .duration(600)
+                .direction("alternate")
+                .iterations(3)
+                .addAnimation([animation1, animation2]);
+            parentAnimation.play();    }
+    }
+    useEffect(groupAnimations, []);
+
+
     return (
         <IonPage>
             <IonHeader>
                 <IonToolbar>
                     <IonTitle>Beauties List</IonTitle>
+                    <IonButton shape="round" slot="end" onClick={handleLogout}>LOGOUT</IonButton>
                     {/*<IonButton  onClick={handleLogout}>Logout</IonButton>*/}
                 </IonToolbar>
+                <div className="networkStatus">
+                    Network is: <b>{networkStatus.connected ? "online" : "offline"}</b>
+                </div>
             </IonHeader>
             <IonContent fullscreen>
                 <IonLoading isOpen={fetching} message="Fetching beauties" />
+                <div className="searchBar">
                 <IonSearchbar
                     value={search}
                     debounce={1000}
                     onIonChange={(e) => setSearch(e.detail.value!)}
                 ></IonSearchbar>
+                </div>
+                <div className="select">
                 <IonSelect
                     value={filter}
                     placeholder="Selection about disponibility"
@@ -97,6 +160,7 @@ const BeautyList: React.FC<RouteComponentProps> = ({ history }) => {
                         </IonSelectOption>
                     ))}
                 </IonSelect>
+                </div>
                 {beautiesShow &&
                 beautiesShow.map((beauty: BeautyProps) => {
                     return (
@@ -109,6 +173,10 @@ const BeautyList: React.FC<RouteComponentProps> = ({ history }) => {
                             nrPersoane={beauty.nrPersoane}
                             nume={beauty.nume}
                             ocupat={beauty.ocupat}
+                            status={beauty.status}
+                            photoPath={beauty.photoPath}
+                            latitude={beauty.latitude}
+                            longitude={beauty.longitude}
                             onEdit={(id) => history.push(`/beauty/${id}`)}
                         />
                     );
@@ -129,62 +197,9 @@ const BeautyList: React.FC<RouteComponentProps> = ({ history }) => {
                     </IonFabButton>
                 </IonFab>
             </IonContent>
-            <IonButton  onClick={handleLogout}>Logout</IonButton>
         </IonPage>
     );
 };
 
 export default BeautyList;
 
-// import React, { useContext } from 'react';
-// import { RouteComponentProps } from 'react-router';
-// import {
-//     IonContent,
-//     IonFab,
-//     IonFabButton,
-//     IonHeader,
-//     IonIcon,
-//     IonList, IonLoading,
-//     IonPage,
-//     IonTitle,
-//     IonToolbar
-// } from '@ionic/react';
-// import { add } from 'ionicons/icons';
-// import Beauty from './Beauty';
-// import { getLogger } from '../core';
-// import { ItemContext } from './BeautyProvider';
-//
-// const log = getLogger('BeautyList');
-//
-// const BeautyList: React.FC<RouteComponentProps> = ({ history }) => {
-//     const { items, fetching, fetchingError } = useContext(ItemContext);
-//     log('render');
-//     return (
-//         <IonPage>
-//             <IonHeader>
-//                 <IonToolbar>
-//                     <IonTitle>Beauty Salon</IonTitle>
-//                 </IonToolbar>
-//             </IonHeader>
-//             <IonContent>
-//                 <IonLoading isOpen={fetching} message="Fetching items" />
-//                 {items && (
-//                     <IonList>
-//                         {items.map(({ id, data,ora,serv,nrPer,num,lib}) =>
-//                             <Beauty key={id} id={id} data={data} ora={ora} serv={serv} nrPer={nrPer} num={num} lib={lib} onEdit={id => history.push(`/item/${id}`)} />)}
-//                     </IonList>
-//                 )}
-//                 {fetchingError && (
-//                     <div>{fetchingError.message || 'Failed to fetch items'}</div>
-//                 )}
-//                 <IonFab vertical="bottom" horizontal="end" slot="fixed">
-//                     <IonFabButton onClick={() => history.push('/item')}>
-//                         <IonIcon icon={add} />
-//                     </IonFabButton>
-//                 </IonFab>
-//             </IonContent>
-//         </IonPage>
-//     );
-// };
-//
-// export default BeautyList;
